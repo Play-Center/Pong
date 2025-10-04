@@ -1,0 +1,32 @@
+* { box-sizing: border-box; }
+html, body {
+  height: 100%;
+  margin: 0;
+  background: #0f1220;
+  color: #e8eaf6;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+}
+main {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  gap: 0.5rem;
+  padding: 1.5rem;
+}
+h1 {
+  margin: 0;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+#game {
+  display: block;
+  width: min(90vw, 900px);
+  aspect-ratio: 800 / 500; /* Scales nicely but keeps internal resolution */
+  border-radius: 12px;
+  outline: 2px solid #303757;
+  background: #0b0d18;
+}
+.hint {
+  opacity: 0.75;
+  font-size: 0.95rem;
+}
