@@ -4,6 +4,11 @@ const introText = document.getElementById("introText");
 const pressStart = document.getElementById("pressStart");
 const hud = document.getElementById("hud");
 
+// Score elements (now above the frame)
+const scoreWrap = document.getElementById("score");
+const leftScoreEl  = document.getElementById("leftScore");
+const rightScoreEl = document.getElementById("rightScore");
+
 function showText(text, sizeRem = 2) {
   introText.style.opacity = 0;
   return new Promise(r => {
@@ -35,11 +40,16 @@ let gameStarted = false;
 document.addEventListener("keydown", (e) => {
   if (!gameStarted && e.code === "Space") {
     gameStarted = true;
-    // fade and then fully remove the intro so it can't overlay
+
+    // Fade out intro and then remove it
     introEl.classList.add("fadeOut");
     setTimeout(() => { introEl.style.display = "none"; }, 600);
+
+    // Fade in the big score above the screen
+    scoreWrap.classList.add("show");
+
     hud.style.visibility = "visible";
-    loop(); // start the game now
+    loop(); // start the game
   }
 });
 
@@ -52,9 +62,6 @@ let ly = H/2-30, ry = H/2-30, bx = W/2, by = H/2, vx = 3, vy = 2;
 const P = 8, PH = 60, S = 4, B = 8, k = {};
 const GREEN = "#00ff9c";
 
-// Scoreboard
-const leftScoreEl  = document.getElementById("leftScore");
-const rightScoreEl = document.getElementById("rightScore");
 let leftScore = 0, rightScore = 0;
 
 onkeydown = e => k[e.key] = 1;
@@ -92,21 +99,21 @@ function loop(){
     vy += ((by + B/2) - (ry + PH/2)) / 20;
   }
 
-  // out of bounds -> score + serve toward the player who conceded
+  // scoring
   if(bx < -30){
     rightScore++; updateScore();
-    serve(false); // send toward left player (who conceded)
+    serve(false);
   }
   if(bx > W + 30){
     leftScore++; updateScore();
-    serve(true); // send toward right player (who conceded)
+    serve(true);
   }
 
   // draw
   g.clearRect(0,0,W,H);
   g.fillStyle = GREEN;
 
-  // center dashed line (retro)
+  // center dashed line
   g.globalAlpha = .6;
   for(let y=0;y<H;y+=16) g.fillRect(W/2 - 1, y, 2, 10);
   g.globalAlpha = 1;
@@ -121,5 +128,3 @@ function loop(){
 
   requestAnimationFrame(loop);
 }
-
-// Note: loop() starts after Spacebar during the intro.
