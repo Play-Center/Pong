@@ -9,7 +9,7 @@ body{display:grid;place-items:center;gap:.75rem}
 
 /* bezel + glass */
 .frame{
-  position:relative;            /* needed for intro overlay */
+  position:relative;            /* needed for overlays */
   padding:10px;
   border:2px solid #0a3;
   border-radius:10px;
@@ -33,7 +33,7 @@ body{display:grid;place-items:center;gap:.75rem}
   border-radius:6px;
 }
 
-/* soft glow around pixels */
+/* canvas look */
 canvas{
   display:block;
   background:linear-gradient(#000, #040) no-repeat;
@@ -42,7 +42,7 @@ canvas{
   box-shadow:0 0 12px var(--phosphor), 0 0 42px rgba(0,255,156,.25);
 }
 
-/* tiny HUD text */
+/* heads-up text */
 .hud{
   opacity:.9; letter-spacing:.2em; text-transform:uppercase;
   filter:drop-shadow(0 0 4px var(--phosphor));
@@ -57,7 +57,7 @@ canvas{
   align-items:center;
   justify-content:center;
   gap:1rem;
-  background:transparent;   /* overlay but see-through */
+  background:transparent;
   z-index:2;                /* above canvas */
   text-align:center;
   padding:1rem;
@@ -78,7 +78,29 @@ canvas{
   letter-spacing:.2em;
 }
 
-.hidden{ display:none !important; }
+#intro.fadeOut{
+  opacity:0;
+  transition:opacity 0.6s ease;
+  pointer-events:none;
+}
+
+/* Score overlay */
+#score{
+  position:absolute;
+  top:10px; left:50%;
+  transform:translateX(-50%);
+  z-index:1;                 /* above canvas, below intro */
+  font-size:22px;
+  letter-spacing:.1em;
+  display:flex;
+  align-items:center;
+  gap:.5rem;
+  text-shadow:0 0 8px var(--phosphor);
+}
+#score .divider{ opacity:.8 }
+
+/* bottom HUD */
+#hud{ margin-top:.25rem }
 
 @keyframes flicker{
   0%,19%,21%,23%,100%{opacity:.88}
