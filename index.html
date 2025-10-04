@@ -1,16 +1,21 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pong Intro</title>
+  <meta charset="utf-8">
+  <title>Pong — Retro</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="intro">
-    <h1 id="introText"></h1>
-    <p id="pressStart"></p>
+  <div class="frame crt">
+    <div id="intro">
+      <h1 id="introText"></h1>
+      <p id="pressStart"></p>
+    </div>
+
+    <canvas id="c" width="640" height="360"></canvas>
   </div>
+
+  <div class="hud" id="hud">W/S · ↑/↓</div>
 
   <script src="script.js"></script>
 </body>
