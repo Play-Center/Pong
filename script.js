@@ -1,120 +1,52 @@
-// Super simple 2-player Pong (Left: W/S, Right: ArrowUp/ArrowDown)
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
-const scoreL = document.getElementById('l');
-const scoreR = document.getElementById('r');
+// Retro-green minimal Pong (W/S for left, ArrowUp/ArrowDown for right)
+const c = document.getElementById("c"), g = c.getContext("2d");
+const W = c.width, H = c.height;
+let ly = H/2-30, ry = H/2-30, bx = W/2, by = H/2, vx = 3, vy = 2;
+const P = 8, PH = 60, S = 4, B = 8, k = {};
+const GREEN = "#00ff9c";
 
-const W = canvas.width, H = canvas.height;
+onkeydown = e => k[e.key] = 1;
+onkeyup   = e => k[e.key] = 0;
 
-// Game objects
-const PADDLE_H = 60, PADDLE_W = 8, PADDLE_SPEED = 4;
-const BALL_SIZE = 8, BALL_SPEED = 3;
+function loop(){
+  // paddles
+  if(k.w) ly = Math.max(0, ly - S);
+  if(k.s) ly = Math.min(H - PH, ly + S);
+  if(k.ArrowUp)   ry = Math.max(0, ry - S);
+  if(k.ArrowDown) ry = Math.min(H - PH, ry + S);
 
-const left = { x: 16, y: H/2 - PADDLE_H/2 };
-const right = { x: W - 16 - PADDLE_W, y: H/2 - PADDLE_H/2 };
-const ball = { x: W/2, y: H/2, vx: BALL_SPEED, vy: BALL_SPEED };
+  // ball
+  bx += vx; by += vy;
+  if(by <= 0 || by + B >= H){ vy *= -1; by = Math.max(0, Math.min(H - B, by)); }
 
-let keys = {};
-let lScore = 0, rScore = 0;
+  // collisions
+  if(bx <= 16 + P && by + B > ly && by < ly + PH && vx < 0){ vx *= -1; bx = 16 + P; vy += ((by + B/2) - (ly + PH/2)) / 20; }
+  if(bx + B >= W - 16 - P && by + B > ry && by < ry + PH && vx > 0){ vx *= -1; bx = W - 16 - P - B; vy += ((by + B/2) - (ry + PH/2)) / 20; }
 
-function resetBall(direction = Math.random() < 0.5 ? -1 : 1) {
-  ball.x = W/2;
-  ball.y = H/2;
-  const angle = (Math.random() * 0.6 - 0.3); // slight random angle
-  ball.vx = direction * BALL_SPEED * (1 + Math.abs(angle));
-  ball.vy = BALL_SPEED * angle;
-}
-
-function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
-
-function update() {
-  // Left paddle movement (W/S)
-  if (keys['w']) left.y -= PADDLE_SPEED;
-  if (keys['s']) left.y += PADDLE_SPEED;
-  // Right paddle movement (ArrowUp/ArrowDown)
-  if (keys['ArrowUp']) right.y -= PADDLE_SPEED;
-  if (keys['ArrowDown']) right.y += PADDLE_SPEED;
-
-  left.y = clamp(left.y, 0, H - PADDLE_H);
-  right.y = clamp(right.y, 0, H - PADDLE_H);
-
-  // Move ball
-  ball.x += ball.vx;
-  ball.y += ball.vy;
-
-  // Top/bottom bounce
-  if (ball.y <= 0 || ball.y + BALL_SIZE >= H) {
-    ball.vy *= -1;
-    // keep inside bounds
-    ball.y = clamp(ball.y, 0, H - BALL_SIZE);
+  // reset if out
+  if(bx < -30 || bx > W + 30){
+    bx = W/2; by = H/2;
+    vx = (Math.random() < .5 ? -1 : 1) * 3;
+    vy = (Math.random() * .6 - .3) * 4;
   }
 
-  // Paddle collision (AABB)
-  const hitLeft = ball.x <= left.x + PADDLE_W &&
-                  ball.x >= left.x &&
-                  ball.y + BALL_SIZE >= left.y &&
-                  ball.y <= left.y + PADDLE_H;
+  // draw
+  g.clearRect(0,0,W,H);
+  g.fillStyle = GREEN;
 
-  const hitRight = ball.x + BALL_SIZE >= right.x &&
-                   ball.x + BALL_SIZE <= right.x + PADDLE_W &&
-                   ball.y + BALL_SIZE >= right.y &&
-                   ball.y <= right.y + PADDLE_H;
+  // center dashed line (retro)
+  g.globalAlpha = .6;
+  for(let y=0;y<H;y+=16) g.fillRect(W/2 - 1, y, 2, 10);
+  g.globalAlpha = 1;
 
-  if (hitLeft) {
-    ball.x = left.x + PADDLE_W; // prevent sticking
-    ball.vx = Math.abs(ball.vx);
-    // add a little angle based on where it hit the paddle
-    const offset = ((ball.y + BALL_SIZE/2) - (left.y + PADDLE_H/2)) / (PADDLE_H/2);
-    ball.vy = BALL_SPEED * offset;
-  }
+  // paddles and ball with glow
+  g.shadowColor = GREEN;
+  g.shadowBlur = 12;
+  g.fillRect(16, ly, P, PH);
+  g.fillRect(W - 16 - P, ry, P, PH);
+  g.fillRect(bx, by, B, B);
+  g.shadowBlur = 0;
 
-  if (hitRight) {
-    ball.x = right.x - BALL_SIZE;
-    ball.vx = -Math.abs(ball.vx);
-    const offset = ((ball.y + BALL_SIZE/2) - (right.y + PADDLE_H/2)) / (PADDLE_H/2);
-    ball.vy = BALL_SPEED * offset;
-  }
-
-  // Scoring
-  if (ball.x + BALL_SIZE < 0) {
-    rScore++; scoreR.textContent = rScore; resetBall(1);
-  } else if (ball.x > W) {
-    lScore++; scoreL.textContent = lScore; resetBall(-1);
-  }
-}
-
-function draw() {
-  ctx.clearRect(0, 0, W, H);
-
-  // Middle dashed line
-  ctx.setLineDash([6, 10]);
-  ctx.strokeStyle = '#333';
-  ctx.beginPath();
-  ctx.moveTo(W/2, 0);
-  ctx.lineTo(W/2, H);
-  ctx.stroke();
-  ctx.setLineDash([]);
-
-  // Paddles
-  ctx.fillStyle = '#5ee';
-  ctx.fillRect(left.x, left.y, PADDLE_W, PADDLE_H);
-  ctx.fillRect(right.x, right.y, PADDLE_W, PADDLE_H);
-
-  // Ball
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(ball.x, ball.y, BALL_SIZE, BALL_SIZE);
-}
-
-function loop() {
-  update();
-  draw();
   requestAnimationFrame(loop);
 }
-
-// Input
-addEventListener('keydown', e => { keys[e.key] = true; });
-addEventListener('keyup',   e => { keys[e.key] = false; });
-
-// Start
-resetBall();
 loop();
