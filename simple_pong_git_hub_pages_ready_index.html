@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Simple Pong</title>
+  <style>
+    :root{
+      --bg:#0f1220; --fg:#e8ecf1; --accent:#5ee1a6; --muted:#8a94a7;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0}
+    body{
+      display:grid; place-items:center; background:radial-gradient(1200px 600px at 50% -10%, #1b2040, var(--bg));
+      color:var(--fg); font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,"Helvetica Neue",Arial,sans-serif;
+    }
+    .wrap{width:min(94vw, 950px);}
+    header{display:flex; justify-content:space-between; align-items:center; gap:1rem; margin-bottom:10px}
+    h1{font-size:clamp(18px,3vw,26px); margin:0; letter-spacing:0.5px}
+    .btnrow{display:flex; gap:8px; flex-wrap:wrap}
+    button{
+      background:transparent; border:1px solid var(--muted); color:var(--fg);
+      padding:6px 10px; border-radius:12px; cursor:pointer; font-weight:600; letter-spacing:0.3px;
+    }
+    button:hover{border-color:var(--accent); color:var(--accent)}
+    #board{
+      width:100%; aspect-ratio:16/10; border-radius:18px; border:2px solid #2a3050;
+      background:linear-gradient(180deg, #0c1026, #0a0d1d);
+      box-shadow:0 20px 50px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.05);
+      touch-action:none;
+    }
+    .help{
+      margin-top:10px; color:var(--muted); font-size:14px; line-height:1.45;
+    }
+    .kbd{display:inline-block; border:1px solid #3a4163; border-bottom-width:3px; padding:2px 6px; border-radius:6px; font-weight:700; color:#cdd5e7}
+    .toast{
+      position:fixed; left:50%; transform:translateX(-50%);
+      bottom:16px; background:#111525; color:#d9e3f7; border:1px solid #2c3254; border-radius:12px;
+      padding:8px 12px; font-size:13px; opacity:.95
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Simple Pong</h1>
+      <div class="btnrow">
+        <button id="startBtn" title="Space">▶ Start / Pause</button>
+        <button id="resetBtn" title="R">↺ Reset</button>
+        <button id="cpuBtn" title="C">🤖 Toggle CPU (Right)</button>
+      </div>
+    </header>
+    <canvas id="board" width="800" height="500" aria-label="Pong game area"></canvas>
+    <div class="help">
+      <strong>Controls:</strong>
+      <span class="kbd">W</span>/<span class="kbd">S</span> for Left •
+      <span class="kbd">↑</span>/<span class="kbd">↓</span> for Right •
+      <span class="kbd">Space</span> Pause/Resume •
+      <span class="kbd">R</span> Reset •
+      <span class="kbd">C</span> Toggle CPU. On touch devices, drag on left/right halves.
+    </div>
+  </div>
+
+  <div class="toast" id="toast" style="display:none"></div>
+
+  <script>
+    /* Utility: crisp canvas with devicePixelRatio */
+    const canvas = document.getElementById('board');
+    const ctx = canvas.getContext('2d');
+    function fitCanvas(){
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = Math.round(rect.width * dpr);
+      canvas.height = Math.round(rect.height * dpr);
+      scale = dpr; // used for drawing sizes
+    }
+    let scale = 1; fitCanvas();
+    addEventListener('resize', fitCanvas);
+
+    // Game state
+    const state = {
+      running:false,
+      leftUp:false,leftDown:false,rightUp:false,rightDown:false,
+      cpu:true,
+      scoreL:0, scoreR:0, winScore:11,
+    };
+
+    // Entities (sizes expressed relative to canvas height for consistency)
+    function dims(){
+      const h = canvas.height;
+      const w = canvas.width;
+      return {
+        w, h,
+        paddleW: Math.max(8*scale, w*0.008),
+        paddleH: Math.max(70*scale, h*0.18),
+        ballR: Math.max(6*scale, h*0.018),
+        lineW: Math.max(2*scale, w*0.003)
+      }
+    }
+
+    let L = {x:0, y:0, vy:0};
+    let R = {x:0, y:0, vy:0};
+    let ball = {x:0, y:0, vx:0, vy:0, speedBase:0.42, speedMax:1.25}; // pixels/ms (scaled later)
+
+    function resetPositions(dir = Math.random() < 0.5 ? -1 : 1){
+      const d = dims();
+      L.x = 30*scale; R.x = d.w - 30*scale - d.paddleW;
+      L.y = R.y = (d.h - d.paddleH)/2; L.vy = R.vy = 0;
+      ball.x = d.w/2; ball.y = d.h/2;
+      const speed = (ball.speedBase + Math.random()*0.08) * d.h; // scale by canvas height
+      const angle = (Math.random()*0.6 - 0.3); // -0.3..0.3 rad from horizontal
+      ball.vx = Math.cos(angle)*speed*dir; ball.vy = Math.sin(angle)*speed;
+    }
+
+    resetPositions();
+
+    // Input
+    addEventListener('keydown', (e)=>{
+      if(e.repeat) return;
+      if(e.code==='KeyW') state.leftUp = true;
+      if(e.code==='KeyS') state.leftDown = true;
+      if(e.code==='ArrowUp') state.rightUp = true;
+      if(e.code==='ArrowDown') state.rightDown = true;
+      if(e.code==='Space') toggleRun();
+      if(e.code==='KeyR') resetGame();
+      if(e.code==='KeyC') toggleCPU();
+    });
+    addEventListener('keyup', (e)=>{
+      if(e.code==='KeyW') state.leftUp = false;
+      if(e.code==='KeyS') state.leftDown = false;
+      if(e.code==='ArrowUp') state.rightUp = false;
+      if(e.code==='ArrowDown') state.rightDown = false;
+    });
+
+    // Touch / pointer controls: drag in left/right halves to move paddles
+    let pointer = { active:false, id:null };
+    canvas.addEventListener('pointerdown', (e)=>{ pointer.active=true; pointer.id=e.pointerId; canvas.setPointerCapture(e.pointerId); });
+    canvas.addEventListener('pointerup', (e)=>{ pointer.active=false; pointer.id=null; });
+    canvas.addEventListener('pointercancel', ()=>{ pointer.active=false; pointer.id=null; });
+    canvas.addEventListener('pointermove', (e)=>{
+      if(!pointer.active) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left) * (canvas.width/rect.width);
+      const y = (e.clientY - rect.top) * (canvas.height/rect.height);
+      const d = dims();
+      if(x < canvas.width/2){ // left side control
+        L.y = Math.max(0, Math.min(d.h - d.paddleH, y - d.paddleH/2));
+      } else { // right side control
+        R.y = Math.max(0, Math.min(d.h - d.paddleH, y - d.paddleH/2));
+      }
+    });
+
+    // Buttons
+    const startBtn = document.getElementById('startBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const cpuBtn   = document.getElementById('cpuBtn');
+    startBtn.onclick = toggleRun; resetBtn.onclick = resetGame; cpuBtn.onclick = toggleCPU;
+
+    function toggleRun(){ state.running = !state.running; showToast(state.running? 'Game resumed' : 'Paused'); }
+    function resetGame(){ state.scoreL=0; state.scoreR=0; state.running=false; resetPositions(); showToast('Reset'); draw(0,true); }
+    function toggleCPU(){ state.cpu = !state.cpu; showToast(state.cpu? 'CPU enabled (Right)' : 'CPU disabled'); }
+
+    // Core loop
+    let last = performance.now();
+    function loop(now){
+      const dt = Math.min(32, now - last); // ms clamp
+      last = now;
+      if(state.running) update(dt);
+      draw(dt);
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+
+    function update(dt){
+      const d = dims();
+      const paddleSpeed = 0.85 * d.h; // px/sec, scaled to canvas height
+
+      // Left paddle movement
+      if(state.leftUp) L.y -= paddleSpeed * (dt/1000);
+      if(state.leftDown) L.y += paddleSpeed * (dt/1000);
+
+      // Right paddle movement (human or CPU)
+      if(state.cpu){
+        const target = ball.y - d.paddleH/2 + (Math.sin(performance.now()/180) * 10*scale);
+        const dir = Math.sign(target - R.y);
+        R.y += dir * paddleSpeed * 0.75 * (dt/1000);
+      } else {
+        if(state.rightUp) R.y -= paddleSpeed * (dt/1000);
+        if(state.rightDown) R.y += paddleSpeed * (dt/1000);
+      }
+
+      // Clamp paddles
+      L.y = Math.max(0, Math.min(d.h - d.paddleH, L.y));
+      R.y = Math.max(0, Math.min(d.h - d.paddleH, R.y));
+
+      // Move ball
+      ball.x += ball.vx * (dt/1000);
+      ball.y += ball.vy * (dt/1000);
+
+      // Collide top/bottom
+      if(ball.y - d.ballR <= 0 && ball.vy < 0){ ball.y = d.ballR; ball.vy *= -1; }
+      if(ball.y + d.ballR >= d.h && ball.vy > 0){ ball.y = d.h - d.ballR; ball.vy *= -1; }
+
+      // Collide paddles
+      function hitPaddle(P){
+        const withinY = ball.y > P.y && ball.y < P.y + d.paddleH;
+        return withinY;
+      }
+      // Left paddle
+      if(ball.x - d.ballR <= L.x + d.paddleW && ball.vx < 0){
+        if(hitPaddle(L)){
+          ball.x = L.x + d.paddleW + d.ballR;
+          reflectFromPaddle(L);
+        }
+      }
+      // Right paddle
+      if(ball.x + d.ballR >= R.x && ball.vx > 0){
+        if(hitPaddle(R)){
+          ball.x = R.x - d.ballR;
+          reflectFromPaddle(R);
+        }
+      }
+
+      // Score
+      if(ball.x < -d.ballR){ state.scoreR++; resetPositions(1); state.running=false; showToast(`Point Right • ${state.scoreL}–${state.scoreR}`) }
+      if(ball.x > d.w + d.ballR){ state.scoreL++; resetPositions(-1); state.running=false; showToast(`Point Left • ${state.scoreL}–${state.scoreR}`) }
+
+      // Win condition
+      if(state.scoreL >= state.winScore || state.scoreR >= state.winScore){
+        state.running=false; showToast(`${state.scoreL>state.scoreR? 'Left':'Right'} wins!`);
+      }
+    }
+
+    function reflectFromPaddle(P){
+      const d = dims();
+      // Determine impact point relative to paddle center (-1..1)
+      const rel = ((ball.y - (P.y + d.paddleH/2)) / (d.paddleH/2));
+      const maxBounce = 0.70; // radians
+      const ang = rel * maxBounce; // negative = up, positive = down
+      const speed = Math.min(Math.hypot(ball.vx, ball.vy) * 1.05, ball.speedMax * d.h);
+      const dir = (P === L) ? 1 : -1;
+      ball.vx = Math.cos(ang) * speed * dir;
+      ball.vy = Math.sin(ang) * speed;
+    }
+
+    // Render
+    function draw(){
+      const d = dims();
+      ctx.clearRect(0,0,d.w,d.h);
+
+      // Middle dashed line
+      ctx.setLineDash([10*scale, 12*scale]);
+      ctx.lineWidth = d.lineW; ctx.strokeStyle = '#2a3050';
+      ctx.beginPath(); ctx.moveTo(d.w/2, 12*scale); ctx.lineTo(d.w/2, d.h-12*scale); ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Scores
+      ctx.fillStyle = '#cfe6ff';
+      ctx.font = `${Math.round(42*scale)}px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillText(state.scoreL, d.w*0.25, 18*scale);
+      ctx.fillText(state.scoreR, d.w*0.75, 18*scale);
+
+      // Paddles
+      ctx.fillStyle = '#8fb4ff';
+      roundRect(ctx, L.x, L.y, d.paddleW, d.paddleH, 6*scale);
+      ctx.fillStyle = '#5ee1a6';
+      roundRect(ctx, R.x, R.y, d.paddleW, d.paddleH, 6*scale);
+
+      // Ball (glow)
+      ctx.beginPath(); ctx.fillStyle = '#ffffff';
+      ctx.arc(ball.x, ball.y, d.ballR, 0, Math.PI*2); ctx.fill();
+    }
+
+    function roundRect(ctx, x,y,w,h,r){
+      ctx.beginPath();
+      ctx.moveTo(x+r, y);
+      ctx.arcTo(x+w, y, x+w, y+h, r);
+      ctx.arcTo(x+w, y+h, x, y+h, r);
+      ctx.arcTo(x, y+h, x, y, r);
+      ctx.arcTo(x, y, x+w, y, r);
+      ctx.closePath(); ctx.fill();
+    }
+
+    // Toast helper
+    const toast = document.getElementById('toast');
+    let toastTimer;
+    function showToast(msg){
+      toast.textContent = msg; toast.style.display='block';
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(()=> toast.style.display='none', 1500);
+    }
+
+    // Initial paint
+    draw(0, true);
+  </script>
+</body>
+</html>
