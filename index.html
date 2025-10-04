@@ -3,15 +3,152 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Pong</title>
+  <title>Pong Deluxe</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <main>
-    <h1>Pong | Play Center</h1>
-    <canvas id="game" width="800" height="500" aria-label="Pong game"></canvas>
-    <div class="hint">W / S for left • ↑ / ↓ for right • R to reset</div>
+  <header class="topbar">
+    <h1>Pong Deluxe</h1>
+    <div class="top-actions">
+      <button id="btn-start" class="primary">Start / Serve (Space)</button>
+      <button id="btn-pause">Pause (P)</button>
+      <button id="btn-reset" class="danger">Reset (R)</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="panel">
+      <h2>Game Options</h2>
+
+      <label class="row">
+        <span>Players</span>
+        <select id="opt-players">
+          <option value="1">1P vs AI</option>
+          <option value="2">2 Players (Local)</option>
+        </select>
+      </label>
+
+      <label class="row ai-only">
+        <span>AI Difficulty</span>
+        <select id="opt-ai">
+          <option value="easy">Easy</option>
+          <option value="normal" selected>Normal</option>
+          <option value="hard">Hard</option>
+          <option value="insane">Insane</option>
+        </select>
+      </label>
+
+      <label class="row">
+        <span>Mode</span>
+        <select id="opt-mode">
+          <option value="classic" selected>Classic (First to N)</option>
+          <option value="time">Time Attack (Most points)</option>
+          <option value="sudden">Sudden Death (1 point)</option>
+          <option value="multiball">Multi-Ball (chaos!)</option>
+          <option value="curve">Curveball (spin)</option>
+          <option value="power">Power-Ups</option>
+          <option value="endless">Endless Rally (no scoring)</option>
+        </select>
+      </label>
+
+      <label class="row">
+        <span>Winning Points</span>
+        <input id="opt-target" type="number" min="1" max="50" value="7" />
+      </label>
+
+      <label class="row time-only hidden">
+        <span>Timer (sec)</span>
+        <input id="opt-timer" type="number" min="15" max="600" value="120" />
+      </label>
+
+      <label class="row">
+        <span>Ball Speed</span>
+        <input id="opt-ball" type="range" min="200" max="700" step="10" value="380" />
+      </label>
+
+      <label class="row">
+        <span>Speed Growth</span>
+        <input id="opt-growth" type="range" min="1" max="1.12" step="0.01" value="1.04" />
+      </label>
+
+      <label class="row">
+        <span>Paddle Height</span>
+        <input id="opt-pad" type="range" min="50" max="180" step="2" value="100" />
+      </label>
+
+      <label class="row">
+        <span>Walls</span>
+        <select id="opt-walls">
+          <option value="open" selected>Open (top/bottom bounce)</option>
+          <option value="wrap">Wrap (teleport)</option>
+          <option value="solid">Solid + Random Obstacles</option>
+        </select>
+      </label>
+
+      <div class="row">
+        <label class="chk">
+          <input id="opt-aimtowinner" type="checkbox" checked />
+          <span>Serve toward conceder</span>
+        </label>
+      </div>
+
+      <div class="row">
+        <label class="chk">
+          <input id="opt-touch" type="checkbox" checked />
+          <span>Touch Controls (mobile)</span>
+        </label>
+      </div>
+
+      <div class="row">
+        <button id="btn-apply" class="primary">Apply Options</button>
+        <button id="btn-defaults">Reset Options</button>
+      </div>
+
+      <hr/>
+      <div class="help">
+        <p><strong>Controls</strong></p>
+        <ul>
+          <li>Left: W / S</li>
+          <li>Right: ↑ / ↓</li>
+          <li>Space: Start/Serve</li>
+          <li>P: Pause • R: Reset</li>
+          <li>Drag/Tap left/right half on mobile</li>
+        </ul>
+      </div>
+
+      <hr/>
+      <h2>Score / Timer</h2>
+      <div class="scorebox">
+        <div><span>Left</span><strong id="score-left">0</strong></div>
+        <div><span>Right</span><strong id="score-right">0</strong></div>
+      </div>
+      <div class="timer" id="timer">—</div>
+    </aside>
+
+    <section class="stage">
+      <canvas id="game" width="960" height="540" aria-label="Pong game area"></canvas>
+      <div id="overlay" class="overlay">Press SPACE to serve</div>
+
+      <div id="touch" class="touch hidden">
+        <div class="pad pad-left">
+          <button class="tbtn up" data-side="left" data-dir="-1">▲</button>
+          <button class="tbtn down" data-side="left" data-dir="1">▼</button>
+        </div>
+        <div class="pad pad-right">
+          <button class="tbtn up" data-side="right" data-dir="-1">▲</button>
+          <button class="tbtn down" data-side="right" data-dir="1">▼</button>
+        </div>
+      </div>
+    </section>
   </main>
+
+  <footer class="foot">
+    <span>Built with ♥ — Vanilla JS/Canvas</span>
+    <a href="#" id="link-export">Export Settings</a>
+    <input id="import-file" type="file" accept="application/json" hidden />
+    <button id="btn-import">Import Settings</button>
+  </footer>
+
   <script src="script.js"></script>
 </body>
 </html>
