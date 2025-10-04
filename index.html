@@ -6,18 +6,19 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+  <!-- BIG centered score ABOVE the game -->
+  <div id="score" class="hud">
+    <span id="leftScore">0</span>
+    <span class="divider">:</span>
+    <span id="rightScore">0</span>
+  </div>
+
   <div class="frame crt">
     <!-- Intro overlay -->
     <div id="intro">
       <h1 id="introText"></h1>
       <p id="pressStart"></p>
-    </div>
-
-    <!-- Score overlay -->
-    <div id="score" class="hud">
-      <span id="leftScore">0</span>
-      <span class="divider">:</span>
-      <span id="rightScore">0</span>
     </div>
 
     <canvas id="c" width="640" height="360"></canvas>
