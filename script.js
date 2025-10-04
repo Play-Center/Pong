@@ -18,7 +18,7 @@ function showText(text, sizeRem = 2) {
 
 async function runIntro() {
   hud.style.visibility = "hidden";
-  await showText("Game Center Introduces…", 2);
+  await showText("Play Center Introduces…", 2);
   await new Promise(r => setTimeout(r, 1500));
 
   introText.style.opacity = 0;
