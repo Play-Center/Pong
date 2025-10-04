@@ -1,15 +1,56 @@
-:root { --bg:#111; --fg:#eee; --accent:#5ee; }
-* { box-sizing: border-box; }
-html, body { height:100%; }
-body {
-  margin:0; display:flex; flex-direction:column; align-items:center; gap:.5rem;
-  background:var(--bg); color:var(--fg); font:16px/1.3 system-ui, sans-serif;
+/* Retro CRT vibe: phosphor green, scanlines, vignette */
+:root{
+  --phosphor:#00ff9c;
+  --bg:#000;          /* deep black */
+  --glass:#021c10;    /* faint tint */
 }
-h1 { margin:.75rem 0 .25rem; font-size:1.1rem; font-weight:600; color:var(--accent); }
-.hint { margin:0; opacity:.8; }
-.wrap {
-  border:2px solid var(--accent); border-radius:6px; padding:6px;
-  background:linear-gradient(#0e0e0e,#151515);
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--bg);font:14px/1 monospace;color:var(--phosphor)}
+body{display:grid;place-items:center;gap:.75rem}
+
+/* bezel + glass */
+.frame{
+  padding:10px;
+  border:2px solid #0a3;
+  border-radius:10px;
+  background:
+    radial-gradient(120% 90% at 50% 10%, #093 0%, transparent 60%),
+    linear-gradient(#002, #001);
+  box-shadow:0 0 20px #082 inset, 0 0 24px #061;
 }
-canvas { display:block; background:#000; }
-.score { margin:.25rem 0 1rem; font-size:1.25rem; letter-spacing:.05em; }
+
+/* the CRT screen effect */
+.crt{
+  position:relative;
+}
+.crt::after{
+  content:"";
+  position:absolute; inset:0;
+  background:
+    repeating-linear-gradient(to bottom, rgba(0,0,0,.28) 0 2px, transparent 2px 4px),
+    radial-gradient(150% 120% at 50% 50%, transparent 60%, rgba(0,0,0,.55) 80%);
+  pointer-events:none;
+  mix-blend-mode:overlay;
+  animation:flicker 2.2s infinite steps(2,end);
+  border-radius:6px;
+}
+
+/* soft glow around pixels */
+canvas{
+  display:block;
+  background:linear-gradient(#000, #040) no-repeat;
+  border-radius:6px;
+  image-rendering:pixelated;
+  box-shadow:0 0 12px var(--phosphor), 0 0 42px rgba(0,255,156,.25);
+}
+
+/* tiny HUD text */
+.hud{
+  opacity:.9; letter-spacing:.2em; text-transform:uppercase;
+  filter:drop-shadow(0 0 4px var(--phosphor));
+}
+
+@keyframes flicker{
+  0%,19%,21%,23%,100%{opacity:.88}
+  20%,22%{opacity:.75}
+}
