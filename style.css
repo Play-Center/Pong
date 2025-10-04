@@ -1,32 +1,79 @@
 * { box-sizing: border-box; }
+:root {
+  --bg: #0b0f1a;
+  --panel: #11162a;
+  --ink: #e7ecff;
+  --muted: #9aa3c7;
+  --accent: #6da7ff;
+  --accent-2: #8df2ff;
+  --line: #2a3358;
+  --danger: #ff5d7d;
+  --ok: #58e09f;
+}
 html, body {
   height: 100%;
   margin: 0;
-  background: #0f1220;
-  color: #e8eaf6;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+  background: radial-gradient(1200px 600px at 70% 20%, #0e1430, var(--bg));
+  color: var(--ink);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial;
 }
-main {
-  min-height: 100%;
-  display: grid;
-  place-items: center;
-  gap: 0.5rem;
-  padding: 1.5rem;
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .75rem 1rem; border-bottom: 1px solid var(--line); background: #0d1326dd; backdrop-filter: blur(6px);
 }
-h1 {
-  margin: 0;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+.topbar h1 { margin: 0; font-size: 1.25rem; letter-spacing: .02em; }
+.top-actions { display: flex; gap: .5rem; }
+button {
+  background: #1a2244; color: var(--ink); border: 1px solid var(--line);
+  padding: .5rem .8rem; border-radius: .75rem; cursor: pointer;
+}
+button.primary { background: linear-gradient(180deg, #23336b, #16224f); border-color: #2b3a75; }
+button.primary:hover { outline: 2px solid #2e6cff44; }
+button.danger { background: #36142a; border-color: #5e2943; color: #ffdce5; }
+button:active { transform: translateY(1px); }
+
+.layout { display: grid; grid-template-columns: 360px 1fr; gap: 1rem; padding: 1rem; min-height: calc(100vh - 64px); }
+.panel {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 1rem; padding: 1rem; height: fit-content;
+  position: sticky; top: 0.75rem;
+}
+.panel h2 { margin: .25rem 0 .5rem; font-size: 1.05rem; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin: .5rem 0; }
+.row span { color: var(--muted); }
+.row input[type="number"], .row select, .row input[type="range"] {
+  width: 180px; background: #0c1228; color: var(--ink); border: 1px solid var(--line); border-radius: .5rem; padding: .35rem .5rem;
+}
+.chk { display: flex; align-items: center; gap: .5rem; color: var(--muted); }
+.help ul { margin: .25rem 0 .5rem 1rem; padding: 0; }
+
+.scorebox { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+.scorebox div { background: #0e1530; border: 1px solid var(--line); border-radius: .5rem; padding: .5rem; display:flex; align-items:center; justify-content: space-between;}
+.scorebox span { color: var(--muted); }
+.scorebox strong { font-size: 1.3rem; }
+.timer { margin-top: .5rem; text-align: right; color: var(--accent-2); }
+
+.stage {
+  position: relative; background: #0a0f22; border: 1px solid var(--line);
+  border-radius: 1rem; padding: .75rem; display: grid; place-items: center;
 }
 #game {
-  display: block;
-  width: min(90vw, 900px);
-  aspect-ratio: 800 / 500; /* Scales nicely but keeps internal resolution */
-  border-radius: 12px;
-  outline: 2px solid #303757;
-  background: #0b0d18;
+  display: block; width: min(95%, 1100px); height: auto; border-radius: .75rem;
+  background: #0a0d1a; outline: 2px solid #1e264b;
 }
-.hint {
-  opacity: 0.75;
-  font-size: 0.95rem;
+.overlay {
+  position: absolute; inset: 0; display: grid; place-items: center; color: #cfd7ff;
+  font-weight: 700; font-size: clamp(1rem, 3vw, 1.5rem); pointer-events: none; text-shadow: 0 2px 12px #000a;
 }
+
+.touch { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0; pointer-events: none; }
+.pad { display: grid; align-content: center; justify-items: center; gap: .5rem; }
+.tbtn {
+  pointer-events: auto; width: 64px; height: 64px; border-radius: 50%;
+  background: #0d1538aa; border: 1px solid #2a3a80; font-size: 1.25rem;
+}
+.hidden { display: none !important; }
+.ai-only.hidden { display: none; }
+.time-only.hidden { display: none; }
+
+.foot { display:flex; gap:.75rem; padding: .75rem 1rem; border-top: 1px solid var(--line); color: var(--muted); align-items:center; }
+.foot a { color: var(--accent); }
