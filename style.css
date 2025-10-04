@@ -1,79 +1,120 @@
-* { box-sizing: border-box; }
-:root {
-  --bg: #0b0f1a;
-  --panel: #11162a;
-  --ink: #e7ecff;
-  --muted: #9aa3c7;
-  --accent: #6da7ff;
-  --accent-2: #8df2ff;
-  --line: #2a3358;
-  --danger: #ff5d7d;
-  --ok: #58e09f;
-}
-html, body {
-  height: 100%;
-  margin: 0;
-  background: radial-gradient(1200px 600px at 70% 20%, #0e1430, var(--bg));
-  color: var(--ink);
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial;
-}
-.topbar {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: .75rem 1rem; border-bottom: 1px solid var(--line); background: #0d1326dd; backdrop-filter: blur(6px);
-}
-.topbar h1 { margin: 0; font-size: 1.25rem; letter-spacing: .02em; }
-.top-actions { display: flex; gap: .5rem; }
-button {
-  background: #1a2244; color: var(--ink); border: 1px solid var(--line);
-  padding: .5rem .8rem; border-radius: .75rem; cursor: pointer;
-}
-button.primary { background: linear-gradient(180deg, #23336b, #16224f); border-color: #2b3a75; }
-button.primary:hover { outline: 2px solid #2e6cff44; }
-button.danger { background: #36142a; border-color: #5e2943; color: #ffdce5; }
-button:active { transform: translateY(1px); }
+// Super simple 2-player Pong (Left: W/S, Right: ArrowUp/ArrowDown)
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const scoreL = document.getElementById('l');
+const scoreR = document.getElementById('r');
 
-.layout { display: grid; grid-template-columns: 360px 1fr; gap: 1rem; padding: 1rem; min-height: calc(100vh - 64px); }
-.panel {
-  background: var(--panel); border: 1px solid var(--line); border-radius: 1rem; padding: 1rem; height: fit-content;
-  position: sticky; top: 0.75rem;
-}
-.panel h2 { margin: .25rem 0 .5rem; font-size: 1.05rem; }
-.row { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin: .5rem 0; }
-.row span { color: var(--muted); }
-.row input[type="number"], .row select, .row input[type="range"] {
-  width: 180px; background: #0c1228; color: var(--ink); border: 1px solid var(--line); border-radius: .5rem; padding: .35rem .5rem;
-}
-.chk { display: flex; align-items: center; gap: .5rem; color: var(--muted); }
-.help ul { margin: .25rem 0 .5rem 1rem; padding: 0; }
+const W = canvas.width, H = canvas.height;
 
-.scorebox { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
-.scorebox div { background: #0e1530; border: 1px solid var(--line); border-radius: .5rem; padding: .5rem; display:flex; align-items:center; justify-content: space-between;}
-.scorebox span { color: var(--muted); }
-.scorebox strong { font-size: 1.3rem; }
-.timer { margin-top: .5rem; text-align: right; color: var(--accent-2); }
+// Game objects
+const PADDLE_H = 60, PADDLE_W = 8, PADDLE_SPEED = 4;
+const BALL_SIZE = 8, BALL_SPEED = 3;
 
-.stage {
-  position: relative; background: #0a0f22; border: 1px solid var(--line);
-  border-radius: 1rem; padding: .75rem; display: grid; place-items: center;
-}
-#game {
-  display: block; width: min(95%, 1100px); height: auto; border-radius: .75rem;
-  background: #0a0d1a; outline: 2px solid #1e264b;
-}
-.overlay {
-  position: absolute; inset: 0; display: grid; place-items: center; color: #cfd7ff;
-  font-weight: 700; font-size: clamp(1rem, 3vw, 1.5rem); pointer-events: none; text-shadow: 0 2px 12px #000a;
+const left = { x: 16, y: H/2 - PADDLE_H/2 };
+const right = { x: W - 16 - PADDLE_W, y: H/2 - PADDLE_H/2 };
+const ball = { x: W/2, y: H/2, vx: BALL_SPEED, vy: BALL_SPEED };
+
+let keys = {};
+let lScore = 0, rScore = 0;
+
+function resetBall(direction = Math.random() < 0.5 ? -1 : 1) {
+  ball.x = W/2;
+  ball.y = H/2;
+  const angle = (Math.random() * 0.6 - 0.3); // slight random angle
+  ball.vx = direction * BALL_SPEED * (1 + Math.abs(angle));
+  ball.vy = BALL_SPEED * angle;
 }
 
-.touch { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 0; pointer-events: none; }
-.pad { display: grid; align-content: center; justify-items: center; gap: .5rem; }
-.tbtn {
-  pointer-events: auto; width: 64px; height: 64px; border-radius: 50%;
-  background: #0d1538aa; border: 1px solid #2a3a80; font-size: 1.25rem;
-}
-.hidden { display: none !important; }
-.ai-only.hidden { display: none; }
-.time-only.hidden { display: none; }
+function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
 
-.foot { display:flex; gap:.75rem; padding: .75rem 1rem; border-top: 1px solid var(--line); color: var(--muted); align-items:center; }
-.foot a { color: var(--accent); }
+function update() {
+  // Left paddle movement (W/S)
+  if (keys['w']) left.y -= PADDLE_SPEED;
+  if (keys['s']) left.y += PADDLE_SPEED;
+  // Right paddle movement (ArrowUp/ArrowDown)
+  if (keys['ArrowUp']) right.y -= PADDLE_SPEED;
+  if (keys['ArrowDown']) right.y += PADDLE_SPEED;
+
+  left.y = clamp(left.y, 0, H - PADDLE_H);
+  right.y = clamp(right.y, 0, H - PADDLE_H);
+
+  // Move ball
+  ball.x += ball.vx;
+  ball.y += ball.vy;
+
+  // Top/bottom bounce
+  if (ball.y <= 0 || ball.y + BALL_SIZE >= H) {
+    ball.vy *= -1;
+    // keep inside bounds
+    ball.y = clamp(ball.y, 0, H - BALL_SIZE);
+  }
+
+  // Paddle collision (AABB)
+  const hitLeft = ball.x <= left.x + PADDLE_W &&
+                  ball.x >= left.x &&
+                  ball.y + BALL_SIZE >= left.y &&
+                  ball.y <= left.y + PADDLE_H;
+
+  const hitRight = ball.x + BALL_SIZE >= right.x &&
+                   ball.x + BALL_SIZE <= right.x + PADDLE_W &&
+                   ball.y + BALL_SIZE >= right.y &&
+                   ball.y <= right.y + PADDLE_H;
+
+  if (hitLeft) {
+    ball.x = left.x + PADDLE_W; // prevent sticking
+    ball.vx = Math.abs(ball.vx);
+    // add a little angle based on where it hit the paddle
+    const offset = ((ball.y + BALL_SIZE/2) - (left.y + PADDLE_H/2)) / (PADDLE_H/2);
+    ball.vy = BALL_SPEED * offset;
+  }
+
+  if (hitRight) {
+    ball.x = right.x - BALL_SIZE;
+    ball.vx = -Math.abs(ball.vx);
+    const offset = ((ball.y + BALL_SIZE/2) - (right.y + PADDLE_H/2)) / (PADDLE_H/2);
+    ball.vy = BALL_SPEED * offset;
+  }
+
+  // Scoring
+  if (ball.x + BALL_SIZE < 0) {
+    rScore++; scoreR.textContent = rScore; resetBall(1);
+  } else if (ball.x > W) {
+    lScore++; scoreL.textContent = lScore; resetBall(-1);
+  }
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  // Middle dashed line
+  ctx.setLineDash([6, 10]);
+  ctx.strokeStyle = '#333';
+  ctx.beginPath();
+  ctx.moveTo(W/2, 0);
+  ctx.lineTo(W/2, H);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Paddles
+  ctx.fillStyle = '#5ee';
+  ctx.fillRect(left.x, left.y, PADDLE_W, PADDLE_H);
+  ctx.fillRect(right.x, right.y, PADDLE_W, PADDLE_H);
+
+  // Ball
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(ball.x, ball.y, BALL_SIZE, BALL_SIZE);
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+// Input
+addEventListener('keydown', e => { keys[e.key] = true; });
+addEventListener('keyup',   e => { keys[e.key] = false; });
+
+// Start
+resetBall();
+loop();
