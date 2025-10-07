@@ -1,30 +1,16 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Pong — Retro</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Pong (1972-ish)</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <canvas id="game" width="800" height="480" aria-label="Pong game area"></canvas>
 
-  <!-- BIG centered score ABOVE the game -->
-  <div id="score" class="hud">
-    <span id="leftScore">0</span>
-    <span class="divider">:</span>
-    <span id="rightScore">0</span>
-  </div>
-
-  <div class="frame crt">
-    <!-- Intro overlay -->
-    <div id="intro">
-      <h1 id="introText"></h1>
-      <p id="pressStart"></p>
-    </div>
-
-    <canvas id="c" width="640" height="360"></canvas>
-  </div>
-
-  <div class="hud" id="hud">W/S · ↑/↓</div>
+  <!-- Optional tiny help text (not part of canvas look) -->
+  <div class="help">W/S (Left) • ↑/↓ (Right) • Space = Start/Pause</div>
 
   <script src="script.js"></script>
 </body>

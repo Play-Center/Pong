@@ -1,130 +1,151 @@
-// ===== Intro animation =====
-const introEl = document.getElementById("intro");
-const introText = document.getElementById("introText");
-const pressStart = document.getElementById("pressStart");
-const hud = document.getElementById("hud");
+// === Simple, retro-accurate-ish Pong =======================================
+// Look: dotted center line, square ball, blocky digit scores drawn on canvas.
+// Controls: W/S for left paddle, ↑/↓ for right. Space to start/pause.
 
-// Score elements (now above the frame)
-const scoreWrap = document.getElementById("score");
-const leftScoreEl  = document.getElementById("leftScore");
-const rightScoreEl = document.getElementById("rightScore");
+const c = document.getElementById("game");
+const g = c.getContext("2d");
 
-function showText(text, sizeRem = 2) {
-  introText.style.opacity = 0;
-  return new Promise(r => {
-    setTimeout(() => {
-      introText.textContent = text;
-      introText.style.fontSize = sizeRem + "rem";
-      introText.style.opacity = 1;
-      r();
-    }, 50);
-  });
-}
+// ----- World dimensions and visual constants -----
+const W = c.width, H = c.height;
+const WHITE = "#fff";
 
-async function runIntro() {
-  hud.style.visibility = "hidden";
-  await showText("Play Center Introduces…", 2);
-  await new Promise(r => setTimeout(r, 1500));
+const PADDLE_W = 10;
+const PADDLE_H = 64;          // short paddles feel closer to original cabinets
+const BALL_SIZE = 8;          // square "ball"
+const WALL_PAD = 12;          // horizontal margin from edge for paddles
+const SCORE_SCALE = 10;       // pixel font scale (bigger = larger digits)
 
-  introText.style.opacity = 0;
-  await new Promise(r => setTimeout(r, 500)); // 0.5s gap
+// Speeds (tweak to taste)
+const PADDLE_SPEED = 5;
+const BALL_SPEED = 4.2;       // base speed; will accelerate a bit on hits
+const BALL_SPEED_UP = 1.03;   // acceleration factor per paddle hit
+const BALL_MAX_VY = 6;        // cap vertical speed
 
-  await showText("PONG", 4);
-  await new Promise(r => setTimeout(r, 800));
+// ----- Game state -----
+let leftY  = (H - PADDLE_H) / 2;
+let rightY = (H - PADDLE_H) / 2;
+let ballX  = W / 2;
+let ballY  = H / 2;
+let vx = Math.random() < 0.5 ? -BALL_SPEED : BALL_SPEED;
+let vy = (Math.random() * 2 - 1) * (BALL_SPEED * 0.5);
 
-  pressStart.textContent = "Press SPACE to Start";
-  pressStart.style.opacity = 1;
-}
+let scoreL = 0, scoreR = 0;
+let running = false;
 
-let gameStarted = false;
-document.addEventListener("keydown", (e) => {
-  if (!gameStarted && e.code === "Space") {
-    gameStarted = true;
-
-    // Fade out intro and then remove it
-    introEl.classList.add("fadeOut");
-    setTimeout(() => { introEl.style.display = "none"; }, 600);
-
-    // Fade in the big score above the screen
-    scoreWrap.classList.add("show");
-
-    hud.style.visibility = "visible";
-    loop(); // start the game
+const keys = Object.create(null);
+addEventListener("keydown", e => {
+  keys[e.key] = true;
+  if (e.code === "Space") {
+    running = !running;
+    // If unpausing from a score reset, nudge ball so it isn't perfectly flat
+    if (running && Math.abs(vy) < 0.2) vy = (Math.random() * 2 - 1) * 1.5;
+    e.preventDefault();
   }
 });
+addEventListener("keyup",   e => keys[e.key] = false);
 
-runIntro();
+// ----- Tiny 3x5 blocky digit font (drawn as filled squares) -----
+/*
+Each digit is a 3x5 grid where 1 = filled block, 0 = empty.
+We scale it with SCORE_SCALE to get nice chunky numbers.
+*/
+const FONT3x5 = {
+  "0":[
+    [1,1,1],
+    [1,0,1],
+    [1,0,1],
+    [1,0,1],
+    [1,1,1]
+  ],
+  "1":[
+    [0,1,0],
+    [1,1,0],
+    [0,1,0],
+    [0,1,0],
+    [1,1,1]
+  ],
+  "2":[
+    [1,1,1],
+    [0,0,1],
+    [1,1,1],
+    [1,0,0],
+    [1,1,1]
+  ],
+  "3":[
+    [1,1,1],
+    [0,0,1],
+    [0,1,1],
+    [0,0,1],
+    [1,1,1]
+  ],
+  "4":[
+    [1,0,1],
+    [1,0,1],
+    [1,1,1],
+    [0,0,1],
+    [0,0,1]
+  ],
+  "5":[
+    [1,1,1],
+    [1,0,0],
+    [1,1,1],
+    [0,0,1],
+    [1,1,1]
+  ],
+  "6":[
+    [1,1,1],
+    [1,0,0],
+    [1,1,1],
+    [1,0,1],
+    [1,1,1]
+  ],
+  "7":[
+    [1,1,1],
+    [0,0,1],
+    [0,1,0],
+    [0,1,0],
+    [0,1,0]
+  ],
+  "8":[
+    [1,1,1],
+    [1,0,1],
+    [1,1,1],
+    [1,0,1],
+    [1,1,1]
+  ],
+  "9":[
+    [1,1,1],
+    [1,0,1],
+    [1,1,1],
+    [0,0,1],
+    [1,1,1]
+  ]
+};
 
-// ===== Retro Pong =====
-const c = document.getElementById("c"), g = c.getContext("2d");
-const W = c.width, H = c.height;
-let ly = H/2-30, ry = H/2-30, bx = W/2, by = H/2, vx = 3, vy = 2;
-const P = 8, PH = 60, S = 4, B = 8, k = {};
-const GREEN = "#00ff9c";
-
-let leftScore = 0, rightScore = 0;
-
-onkeydown = e => k[e.key] = 1;
-onkeyup   = e => k[e.key] = 0;
-
-function serve(towardRight = true) {
-  bx = W/2; by = H/2;
-  vx = (towardRight ? 1 : -1) * 3;
-  vy = (Math.random() * .6 - .3) * 4;
+function drawDigit(n, x, y, scale = SCORE_SCALE, color = WHITE) {
+  const grid = FONT3x5[n];
+  if (!grid) return;
+  g.fillStyle = color;
+  for (let r = 0; r < 5; r++) {
+    for (let cCol = 0; cCol < 3; cCol++) {
+      if (grid[r][cCol]) {
+        g.fillRect(x + cCol*scale, y + r*scale, scale, scale);
+      }
+    }
+  }
 }
 
-function updateScore() {
-  leftScoreEl.textContent  = leftScore;
-  rightScoreEl.textContent = rightScore;
+function drawScore(val, x, y) {
+  const s = String(val);
+  const totalW = s.length * (3*SCORE_SCALE) + (s.length-1)*SCORE_SCALE; // 1 scale gap
+  let cx = x - totalW/2;
+  for (const ch of s) {
+    drawDigit(ch, cx, y);
+    cx += 3*SCORE_SCALE + SCORE_SCALE;
+  }
 }
 
-function loop(){
-  // paddles
-  if(k.w) ly = Math.max(0, ly - S);
-  if(k.s) ly = Math.min(H - PH, ly + S);
-  if(k.ArrowUp)   ry = Math.max(0, ry - S);
-  if(k.ArrowDown) ry = Math.min(H - PH, ry + S);
+// ----- Helpers -----
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
-  // ball
-  bx += vx; by += vy;
-  if(by <= 0 || by + B >= H){ vy *= -1; by = Math.max(0, Math.min(H - B, by)); }
-
-  // collisions
-  if(bx <= 16 + P && by + B > ly && by < ly + PH && vx < 0){
-    vx *= -1; bx = 16 + P;
-    vy += ((by + B/2) - (ly + PH/2)) / 20;
-  }
-  if(bx + B >= W - 16 - P && by + B > ry && by < ry + PH && vx > 0){
-    vx *= -1; bx = W - 16 - P - B;
-    vy += ((by + B/2) - (ry + PH/2)) / 20;
-  }
-
-  // scoring
-  if(bx < -30){
-    rightScore++; updateScore();
-    serve(false);
-  }
-  if(bx > W + 30){
-    leftScore++; updateScore();
-    serve(true);
-  }
-
-  // draw
-  g.clearRect(0,0,W,H);
-  g.fillStyle = GREEN;
-
-  // center dashed line
-  g.globalAlpha = .6;
-  for(let y=0;y<H;y+=16) g.fillRect(W/2 - 1, y, 2, 10);
-  g.globalAlpha = 1;
-
-  // paddles and ball with glow
-  g.shadowColor = GREEN;
-  g.shadowBlur = 12;
-  g.fillRect(16, ly, P, PH);
-  g.fillRect(W - 16 - P, ry, P, PH);
-  g.fillRect(bx, by, B, B);
-  g.shadowBlur = 0;
-
-  requestAnimationFrame(loop);
-}
+function resetBall(direction = (Math.random() < 0.5 ? -
