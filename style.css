@@ -3,6 +3,12 @@ html, body {
   margin: 0;
   background: #000;
   overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: rgba(0,0,0,0);
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 #game {
@@ -13,4 +19,5 @@ html, body {
   background: #000;
   /* Prevent page scroll/zoom during touch controls */
   touch-action: none;
+  -webkit-user-select: none;
 }
