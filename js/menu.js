@@ -112,6 +112,54 @@ function drawDemo() {
   g.fillRect(Math.round(demoBallX), Math.round(demoBallY), DEMO_BALL, DEMO_BALL);
 }
 
+// --- Logo -------------------------------------------------------------------
+/**
+ * Draws a PONG logo similar to the classic mark with three vertical
+ * orange gradient bars to the left of the word "PONG" (5x7 font).
+ * The whole logo block is horizontally centered around centerX.
+ *
+ * @param {number} centerX
+ * @param {number} topY
+ * @param {number} cell Size of a 5x7 pixel
+ */
+function drawPongLogo(centerX, topY, cell) {
+  // Text metrics
+  const text = "PONG";
+  const gap = cell;
+  const textSize = measureTextBlocks(text, cell, gap);
+
+  // Bar metrics — three touching vertical stripes forming a perfect square
+  const barH = 7 * cell;           // match text height
+  const barsWidth = barH;          // square block: width == height
+  // Split width into 3 adjacent stripes with no gap
+  const stripeW = Math.floor(barsWidth / 3);
+  const stripeW2 = Math.floor((barsWidth - stripeW) / 2);
+  const stripeW3 = barsWidth - stripeW - stripeW2; // ensures exact fill
+  const stripeWidths = [stripeW, stripeW2, stripeW3];
+  const spacer = 4 * cell;         // gap between square bars and text
+
+  // Total block width and start X
+  const totalWidth = barsWidth + spacer + textSize.width;
+  let x = Math.round(centerX - totalWidth / 2);
+  const y = Math.round(topY);
+
+  // Bars colors (dark -> light)
+  const bars = ["#E67E22", "#F39C12", "#F1C40F"]; // dark orange, orange, yellow
+  for (let i = 0; i < 3; i++) {
+    g.fillStyle = bars[i];
+    const w = stripeWidths[i];
+    g.fillRect(x, y, w, barH);
+    x += w; // no gap between stripes
+  }
+
+  // Space between bars and text
+  x += spacer;
+
+  // Draw text left-aligned at x by converting to center-based API
+  const textCenterX = x + Math.round(textSize.width / 2);
+  drawTextBlocks(text, textCenterX, y, cell, g, WHITE, gap);
+}
+
 /**
  * Point-in-rect test.
  * @param {number} mx
@@ -184,7 +232,7 @@ export function drawMenu() {
 
   // Draw title only on the root menu
   if (menuMode === "root") {
-    drawTextBlocks("PONG", W / 2, titleY, titleCell, g);
+    drawPongLogo(W / 2, titleY, titleCell);
   }
 
   // Buttons per menu screen
