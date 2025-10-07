@@ -1,6 +1,7 @@
 import { g, W, H, scale } from "./state.js";
-import { COLORS } from "./constants.js";
+import { COLORS, SPEEDS, DESIGN } from "./constants.js";
 import { measureTextBlocks, drawTextBlocks } from "./font5x7.js";
+import { clamp } from "./utils.js";
 
 const WHITE = COLORS.WHITE;
 
@@ -11,13 +12,104 @@ let mouseX = -1, mouseY = -1;
 /** @type {{label:string,x:number,y:number,w:number,h:number}[]} */
 let btnRects = []; // [{ label, x, y, w, h }]
 
-// Simple menu state: "root" (PONG + SINGLE/MULTI) or "single" (EASY/NORMAL/HARD)
-/** @type {"root"|"single"} */
+// Simple menu state: "root" (PONG + SINGLE/MULTI/CONTROLS), "single" (EASY/NORMAL/HARD), or "controls"
+/** @type {"root"|"single"|"controls"} */
 let menuMode = "root";
 
 /** Reset menu to the root screen (PONG + SINGLE/MULTI). */
 export function menuReset() {
   menuMode = "root";
+}
+
+// --- Demo (background AI vs AI Pong) ---------------------------------------
+let DEMO_PADDLE_W = 0, DEMO_PADDLE_H = 0, DEMO_BALL = 0, DEMO_WALL_PAD = 0;
+let demoPaddleSpeed = 0, demoBallSpeed = 0;
+let demoLeftY = 0, demoRightY = 0, demoBallX = 0, demoBallY = 0, demoVx = 0, demoVy = 0;
+let _demoInitScale = 0;
+
+function initDemo() {
+  DEMO_PADDLE_W = Math.round(DESIGN.PADDLE_W * scale);
+  DEMO_PADDLE_H = Math.round(DESIGN.PADDLE_H * scale);
+  DEMO_BALL     = Math.max(6, Math.round(DESIGN.BALL * scale));
+  DEMO_WALL_PAD = Math.round(DESIGN.WALL_PAD * scale);
+
+  demoPaddleSpeed = SPEEDS.BASE_PADDLE * scale * 0.6; // slower for calmer background
+  demoBallSpeed   = SPEEDS.BASE_BALL   * scale * 0.9;
+
+  demoLeftY  = Math.round((H - DEMO_PADDLE_H) / 2);
+  demoRightY = Math.round((H - DEMO_PADDLE_H) / 2);
+  resetDemoBall(Math.random() < 0.5 ? -1 : 1);
+
+  _demoInitScale = scale;
+}
+
+function ensureDemo() {
+  if (_demoInitScale !== scale || DEMO_PADDLE_W === 0) initDemo();
+}
+
+function resetDemoBall(direction) {
+  demoBallX = Math.round(W / 2 - DEMO_BALL / 2);
+  demoBallY = Math.round(H / 2 - DEMO_BALL / 2);
+  demoVx = demoBallSpeed * (direction || (Math.random() < 0.5 ? -1 : 1));
+  demoVy = (Math.random() * 2 - 1) * (demoBallSpeed * 0.6);
+}
+
+function updateDemo() {
+  // AI paddles track the ball with a deadzone
+  const dz = Math.max(6, Math.round(8 * scale));
+  const leftCenter  = demoLeftY  + DEMO_PADDLE_H / 2;
+  const rightCenter = demoRightY + DEMO_PADDLE_H / 2;
+  const ballCenter  = demoBallY  + DEMO_BALL / 2;
+
+  if (ballCenter < leftCenter - dz)  demoLeftY  = clamp(demoLeftY  - demoPaddleSpeed, 0, H - DEMO_PADDLE_H);
+  else if (ballCenter > leftCenter + dz) demoLeftY  = clamp(demoLeftY  + demoPaddleSpeed, 0, H - DEMO_PADDLE_H);
+
+  if (ballCenter < rightCenter - dz) demoRightY = clamp(demoRightY - demoPaddleSpeed, 0, H - DEMO_PADDLE_H);
+  else if (ballCenter > rightCenter + dz) demoRightY = clamp(demoRightY + demoPaddleSpeed, 0, H - DEMO_PADDLE_H);
+
+  // Ball move
+  demoBallX += demoVx;
+  demoBallY += demoVy;
+
+  // Walls
+  if (demoBallY <= 0) { demoBallY = 0; demoVy = Math.abs(demoVy); }
+  else if (demoBallY + DEMO_BALL >= H) { demoBallY = H - DEMO_BALL; demoVy = -Math.abs(demoVy); }
+
+  // Paddles
+  const leftX  = DEMO_WALL_PAD;
+  const rightX = W - DEMO_WALL_PAD - DEMO_PADDLE_W;
+
+  if (demoBallX < leftX + DEMO_PADDLE_W && demoBallX + DEMO_BALL > leftX &&
+      demoBallY < demoLeftY + DEMO_PADDLE_H && demoBallY + DEMO_BALL > demoLeftY && demoVx < 0) {
+    demoBallX = leftX + DEMO_PADDLE_W;
+    demoVx = Math.abs(demoVx) * 1.02;
+    const hit = (demoBallY + DEMO_BALL / 2) - (demoLeftY + DEMO_PADDLE_H / 2);
+    demoVy = clamp(demoVy + hit * 0.04, -10 * scale, 10 * scale);
+  }
+
+  if (demoBallX + DEMO_BALL > rightX && demoBallX < rightX + DEMO_PADDLE_W &&
+      demoBallY < demoRightY + DEMO_PADDLE_H && demoBallY + DEMO_BALL > demoRightY && demoVx > 0) {
+    demoBallX = rightX - DEMO_BALL;
+    demoVx = -Math.abs(demoVx) * 1.02;
+    const hit = (demoBallY + DEMO_BALL / 2) - (demoRightY + DEMO_PADDLE_H / 2);
+    demoVy = clamp(demoVy + hit * 0.04, -10 * scale, 10 * scale);
+  }
+
+  // Reset when out of bounds
+  if (demoBallX + DEMO_BALL < 0)  { resetDemoBall(+1); }
+  if (demoBallX > W)              { resetDemoBall(-1); }
+}
+
+function drawDemo() {
+  // Clear background and draw net, paddles, and ball
+  g.fillStyle = "#000";
+  g.fillRect(0, 0, W, H);
+  
+  // Paddles and ball (no center net on menu)
+  g.fillStyle = WHITE;
+  g.fillRect(Math.round(DEMO_WALL_PAD), Math.round(demoLeftY), DEMO_PADDLE_W, DEMO_PADDLE_H);
+  g.fillRect(Math.round(W - DEMO_WALL_PAD - DEMO_PADDLE_W), Math.round(demoRightY), DEMO_PADDLE_W, DEMO_PADDLE_H);
+  g.fillRect(Math.round(demoBallX), Math.round(demoBallY), DEMO_BALL, DEMO_BALL);
 }
 
 /**
@@ -58,6 +150,11 @@ export function menuClick() {
       menuMode = "single";
       return null;
     }
+    if (hit.label === "CONTROLS") {
+      // Show controls overlay
+      menuMode = "controls";
+      return null;
+    }
     // Allow other root actions to bubble up (e.g., MULTIPLAYER)
     return hit.label;
   }
@@ -66,10 +163,17 @@ export function menuClick() {
   return hit.label; // EASY | NORMAL | HARD
 }
 
-/** Draw the current menu screen (root or difficulty). */
+/** Draw the current menu screen (root, difficulty, or controls). */
 export function drawMenu() {
-  g.fillStyle = "#000";
-  g.fillRect(0, 0, W, H);
+  // Background: show AI demo only outside the controls screen
+  if (menuMode !== "controls") {
+    ensureDemo();
+    updateDemo();
+    drawDemo();
+  } else {
+    g.fillStyle = "#000";
+    g.fillRect(0, 0, W, H);
+  }
 
   // Rebuild rects for this frame
   btnRects = [];
@@ -84,8 +188,30 @@ export function drawMenu() {
   }
 
   // Buttons per menu screen
+  if (menuMode === "controls") {
+    // Render controls text and exit
+    const textCell = Math.max(4, Math.floor(5 * scale));
+    const lineGap  = Math.round(10 * scale);
+    const lines = [
+      "CONTROLS",
+      "",
+      "W/S - USER 1 CONTROLS",
+      "UP/DOWN - USER 2 CONTROLS",
+      "SPACEBAR - START/PAUSE GAME",
+      "ESC - RETURN TO MAIN MENU",
+      "",
+      "PRESS ESC TO GO BACK",
+    ];
+    let y = Math.round((H - (lines.length * (7 * textCell) + (lines.length - 1) * lineGap)) / 2);
+    for (const line of lines) {
+      drawTextBlocks(line, W / 2, y, textCell, g);
+      y += 7 * textCell + lineGap;
+    }
+    return;
+  }
+
   const labels = (menuMode === "root")
-    ? ["SINGLEPLAYER", "MULTIPLAYER"]
+    ? ["SINGLEPLAYER", "MULTIPLAYER", "CONTROLS"]
     : ["EASY", "NORMAL", "HARD"];
   const gap    = btnCell;
   const padX   = 3 * btnCell;
