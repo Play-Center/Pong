@@ -23,45 +23,70 @@ let leftY, rightY, ballX, ballY, vx, vy, running;
 let scoreL = 0, scoreR = 0;
 const keys = Object.create(null);
 
-// ---------- Retro 3x5 pixel font for digits ----------
-const FONT3x5 = {
-  "0":[[1,1,1],[1,0,1],[1,0,1],[1,0,1],[1,1,1]],
-  "1":[[0,1,0],[1,1,0],[0,1,0],[0,1,0],[1,1,1]],
-  "2":[[1,1,1],[0,0,1],[1,1,1],[1,0,0],[1,1,1]],
-  "3":[[1,1,1],[0,0,1],[0,1,1],[0,0,1],[1,1,1]],
-  "4":[[1,0,1],[1,0,1],[1,1,1],[0,0,1],[0,0,1]],
-  "5":[[1,1,1],[1,0,0],[1,1,1],[0,0,1],[1,1,1]],
-  "6":[[1,1,1],[1,0,0],[1,1,1],[1,0,1],[1,1,1]],
-  "7":[[1,1,1],[0,0,1],[0,1,0],[0,1,0],[0,1,0]],
-  "8":[[1,1,1],[1,0,1],[1,1,1],[1,0,1],[1,1,1]],
-  "9":[[1,1,1],[1,0,1],[1,1,1],[0,0,1],[1,1,1]]
+// Scene state
+let state = "menu"; // "menu" | "game"
+
+// Menu button state
+let btnRect = { x: 0, y: 0, w: 0, h: 0 };
+let btnHover = false;
+
+// ---------- 5×7 Retro Pixel Font (denser & readable) ----------
+const FONT5x7 = {
+  "0":[[0,1,1,1,0],[1,0,0,0,1],[1,0,0,1,1],[1,0,1,0,1],[1,1,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
+  "1":[[0,0,1,0,0],[0,1,1,0,0],[1,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[1,1,1,1,1]],
+  "2":[[0,1,1,1,0],[1,0,0,0,1],[0,0,0,0,1],[0,0,1,1,0],[0,1,0,0,0],[1,0,0,0,0],[1,1,1,1,1]],
+  "3":[[0,1,1,1,0],[1,0,0,0,1],[0,0,0,0,1],[0,0,1,1,0],[0,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
+  "4":[[0,0,0,1,0],[0,0,1,1,0],[0,1,0,1,0],[1,0,0,1,0],[1,1,1,1,1],[0,0,0,1,0],[0,0,0,1,0]],
+  "5":[[1,1,1,1,1],[1,0,0,0,0],[1,1,1,1,0],[0,0,0,0,1],[0,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
+  "6":[[0,0,1,1,0],[0,1,0,0,0],[1,0,0,0,0],[1,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
+  "7":[[1,1,1,1,1],[0,0,0,0,1],[0,0,0,1,0],[0,0,1,0,0],[0,1,0,0,0],[0,1,0,0,0],[0,1,0,0,0]],
+  "8":[[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
+  "9":[[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,1],[0,0,0,0,1],[0,0,0,1,0],[0,1,1,0,0]],
+  "A":[[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,1,1,1,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1]],
+  "E":[[1,1,1,1,1],[1,0,0,0,0],[1,1,1,1,0],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,1,1,1,1]],
+  "G":[[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,0],[1,0,1,1,1],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
+  "I":[[1,1,1,1,1],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[1,1,1,1,1]],
+  "L":[[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0],[1,1,1,1,1]],
+  "M":[[1,0,0,0,1],[1,1,0,1,1],[1,0,1,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1]],
+  "N":[[1,0,0,0,1],[1,1,0,0,1],[1,0,1,0,1],[1,0,0,1,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1]],
+  "O":[[0,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
+  "P":[[1,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,1,1,1,0],[1,0,0,0,0],[1,0,0,0,0],[1,0,0,0,0]],
+  "R":[[1,1,1,1,0],[1,0,0,0,1],[1,0,0,0,1],[1,1,1,1,0],[1,0,1,0,0],[1,0,0,1,0],[1,0,0,0,1]],
+  "T":[[1,1,1,1,1],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0]],
+  "U":[[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
+  "Y":[[1,0,0,0,1],[1,0,0,0,1],[0,1,0,1,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0]],
+  " ":[[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0],[0,0,0,0,0]]
 };
 
 // ---------- Helpers ----------
 const snap = v => Math.round(v);
 
-function drawDigit(n, x, y, cellSize, color = WHITE) {
-  const grid = FONT3x5[n];
+function drawGlyph(ch, x, y, cell, color = WHITE) {
+  const grid = FONT5x7[ch];
   if (!grid) return;
   g.fillStyle = color;
-  for (let r = 0; r < 5; r++) {
-    for (let cCol = 0; cCol < 3; cCol++) {
+  for (let r = 0; r < 7; r++) {
+    for (let cCol = 0; cCol < 5; cCol++) {
       if (grid[r][cCol]) {
-        g.fillRect(snap(x + cCol * cellSize), snap(y + r * cellSize), cellSize, cellSize);
+        g.fillRect(snap(x + cCol * cell), snap(y + r * cell), cell, cell);
       }
     }
   }
 }
 
-function drawNumber(num, centerX, topY, cellSize) {
-  const s = String(num);
-  const digitW = 3 * cellSize;
-  const gap = cellSize; // spacing between digits
-  const totalW = s.length * digitW + (s.length - 1) * gap;
-  let x = centerX - totalW / 2;
-  for (const ch of s) {
-    drawDigit(ch, x, topY, cellSize);
-    x += digitW + gap;
+function measureTextBlocks(str, cell, gap = cell) {
+  const n = str.length;
+  const w = n * (5 * cell) + (n - 1) * gap;
+  const h = 7 * cell;
+  return { width: w, height: h };
+}
+
+function drawTextBlocks(str, centerX, topY, cell, color = WHITE, gap = cell) {
+  const { width } = measureTextBlocks(str, cell, gap);
+  let x = centerX - width / 2;
+  for (const ch of str.toUpperCase()) {
+    drawGlyph(ch, x, topY, cell, color);
+    x += 5 * cell + gap;
   }
 }
 
@@ -80,7 +105,6 @@ window.addEventListener("resize", resize);
 
 // ---------- Game (re)setup ----------
 function resetGame(full = true) {
-  // Quantize sizes to integers to avoid half-pixel drift
   PADDLE_W = Math.round(10 * scale);
   PADDLE_H = Math.round(64 * scale);
   BALL_SIZE = Math.max(6, Math.round(8 * scale));
@@ -92,7 +116,6 @@ function resetGame(full = true) {
   leftY  = snap((H - PADDLE_H) / 2);
   rightY = snap((H - PADDLE_H) / 2);
 
-  // Center ball by its size (exact optical center)
   ballX = snap(W / 2 - BALL_SIZE / 2);
   ballY = snap(H / 2 - BALL_SIZE / 2);
 
@@ -113,15 +136,28 @@ function resetBall(direction = (Math.random() < 0.5 ? -1 : 1)) {
 // ---------- Input ----------
 addEventListener("keydown", e => {
   keys[e.key] = true;
-  if (e.code === "Space") {
-    running = !running;
-    if (running && Math.abs(vy) < 0.2) vy = (Math.random() * 2 - 1) * (1.5 * scale);
+
+  if (e.code === "Escape" && state === "game") {
+    state = "menu";
+    running = false;
     e.preventDefault();
   }
 });
 addEventListener("keyup", e => keys[e.key] = false);
 
-// ---------- Update ----------
+// Mouse: hover + click for the menu button
+c.addEventListener("mousemove", e => {
+  if (state !== "menu") return;
+  const r = c.getBoundingClientRect();
+  const mx = e.clientX - r.left, my = e.clientY - r.top;
+  btnHover = (mx >= btnRect.x && mx <= btnRect.x + btnRect.w &&
+              my >= btnRect.y && my <= btnRect.y + btnRect.h);
+});
+c.addEventListener("click", () => {
+  if (state === "menu" && btnHover) { state = "game"; running = true; }
+});
+
+// ---------- Update (game only) ----------
 function collide(px, py, pw, ph, bx, by, bs) {
   return bx < px + pw && bx + bs > px && by < py + ph && by + bs > py;
 }
@@ -168,35 +204,84 @@ function drawNet() {
   const segH  = Math.max(6, Math.round(10 * scale));
   const gap   = Math.max(6, Math.round(10 * scale));
   const lineW = Math.max(2, Math.round(2 * scale));
-  const x     = snap(W / 2 - lineW / 2); // true center
+  const x     = Math.round(W / 2 - lineW / 2);
   for (let y = 0; y < H; y += segH + gap) g.fillRect(x, y, lineW, segH);
 }
 
-function draw() {
-  // Background
+function drawMenu() {
   g.fillStyle = "#000";
   g.fillRect(0, 0, W, H);
 
-  // Net
+  // Smaller, compact menu text (as you liked)
+  const titleCell = Math.max(6, Math.floor(9 * scale));
+  const btnCell   = Math.max(4, Math.floor(5 * scale));
+  const titleY    = 36 * scale;
+
+  // Title
+  drawTextBlocks("PONG", W / 2, titleY, titleCell);
+
+  // Button metrics
+  const label = "MULTIPLAYER";
+  const gap   = btnCell;
+  const size  = measureTextBlocks(label, btnCell, gap);
+  const padX  = 3 * btnCell;
+  const padY  = 2 * btnCell;
+
+  const btnW = size.width + padX * 2;
+  const btnH = size.height + padY * 2;
+  const btnX = Math.round(W / 2 - btnW / 2);
+  const btnY = Math.round(H / 2 - btnH / 2);
+
+  btnRect = { x: btnX, y: btnY, w: btnW, h: btnH };
+
+  // Hover background fill (invert look)
+  if (btnHover) {
+    g.fillStyle = WHITE;
+    g.fillRect(btnX, btnY, btnW, btnH);
+  }
+
+  // Chunky border on top
+  g.fillStyle = WHITE;
+  const bw = Math.max(2, Math.round(2 * scale));
+  g.fillRect(btnX, btnY, btnW, bw);                 // top
+  g.fillRect(btnX, btnY + btnH - bw, btnW, bw);     // bottom
+  g.fillRect(btnX, btnY, bw, btnH);                 // left
+  g.fillRect(btnX + btnW - bw, btnY, bw, btnH);     // right
+
+  // Label (invert color if hovered)
+  if (btnHover) {
+    drawTextBlocks(label, W / 2, btnY + padY, btnCell, "#000", gap);
+  } else {
+    drawTextBlocks(label, W / 2, btnY + padY, btnCell, WHITE, gap);
+  }
+}
+
+function drawGame() {
+  g.fillStyle = "#000";
+  g.fillRect(0, 0, W, H);
+
   drawNet();
 
-  // Paddles & ball (snapped for crisp pixels)
   g.fillStyle = WHITE;
-  g.fillRect(snap(WALL_PAD), snap(leftY),  PADDLE_W, PADDLE_H);
-  g.fillRect(snap(W - WALL_PAD - PADDLE_W), snap(rightY), PADDLE_W, PADDLE_H);
-  g.fillRect(snap(ballX), snap(ballY), BALL_SIZE, BALL_SIZE);
+  g.fillRect(Math.round(WALL_PAD), Math.round(leftY),  PADDLE_W, PADDLE_H);
+  g.fillRect(Math.round(W - WALL_PAD - PADDLE_W), Math.round(rightY), PADDLE_W, PADDLE_H);
+  g.fillRect(Math.round(ballX), Math.round(ballY), BALL_SIZE, BALL_SIZE);
 
-  // Blocky score at top
-  const cell = Math.max(4, Math.floor(6 * scale)); // block thickness
+  // Score (5×7 digits)
+  const cell = Math.max(5, Math.floor(7 * scale));
   const topY = 24 * scale;
-  drawNumber(scoreL, W / 2 - 60 * scale, topY, cell);
-  drawNumber(scoreR, W / 2 + 60 * scale, topY, cell);
+  drawTextBlocks(String(scoreL), W / 2 - 80 * scale, topY, cell);
+  drawTextBlocks(String(scoreR), W / 2 + 80 * scale, topY, cell);
 }
 
 // ---------- Loop ----------
 function loop() {
-  if (running) update();
-  draw();
+  if (state === "menu") {
+    drawMenu();
+  } else {
+    if (running) update();
+    drawGame();
+  }
   requestAnimationFrame(loop);
 }
 
