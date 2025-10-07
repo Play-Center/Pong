@@ -70,6 +70,87 @@ c.addEventListener("click", () => {
   }
 });
 
+// --- touch support (mobile)
+function canvasPos(clientX, clientY) {
+  const r = c.getBoundingClientRect();
+  return { x: clientX - r.left, y: clientY - r.top };
+}
+
+function updateKeysFromTouches(touches) {
+  // Reset directional keys each frame; we will set them if any touch is active
+  keys.w = keys.W = keys.s = keys.S = false;
+  keys.ArrowUp = keys.ArrowDown = false;
+  for (let i = 0; i < touches.length; i++) {
+    const t = touches[i];
+    const { x, y } = canvasPos(t.clientX, t.clientY);
+    const leftSide = x < c.width / 2;
+    const topHalf  = y < c.height / 2;
+    if (leftSide) {
+      if (topHalf) { keys.w = keys.W = true; }
+      else         { keys.s = keys.S = true; }
+    } else {
+      if (topHalf) { keys.ArrowUp = true; }
+      else         { keys.ArrowDown = true; }
+    }
+  }
+}
+
+// Touch: emulate hover/click in menu, and directional controls in game
+c.addEventListener("touchstart", e => {
+  if (scene === "menu") {
+    const t = e.changedTouches[0];
+    if (t) {
+      const { x, y } = canvasPos(t.clientX, t.clientY);
+      menuMouseMove(x, y);
+    }
+  } else if (scene === "game") {
+    updateKeysFromTouches(e.touches);
+  }
+  e.preventDefault();
+}, { passive: false });
+
+c.addEventListener("touchmove", e => {
+  if (scene === "menu") {
+    const t = e.changedTouches[0];
+    if (t) {
+      const { x, y } = canvasPos(t.clientX, t.clientY);
+      menuMouseMove(x, y);
+    }
+  } else if (scene === "game") {
+    updateKeysFromTouches(e.touches);
+  }
+  e.preventDefault();
+}, { passive: false });
+
+c.addEventListener("touchend", e => {
+  if (scene === "menu") {
+    const t = e.changedTouches[0];
+    if (t) {
+      const { x, y } = canvasPos(t.clientX, t.clientY);
+      menuMouseMove(x, y);
+      const act = menuClick();
+      if (act) {
+        if (act === "MULTIPLAYER") {
+          setCpuMode("none");
+          startGame();
+        } else if (act === "EASY" || act === "NORMAL" || act === "HARD") {
+          setCpuMode(act.toLowerCase());
+          startGame();
+        }
+      }
+    }
+  } else if (scene === "game") {
+    updateKeysFromTouches(e.touches);
+  }
+  e.preventDefault();
+}, { passive: false });
+
+c.addEventListener("touchcancel", e => {
+  // Reset keys when touches are canceled
+  updateKeysFromTouches(e.touches);
+  e.preventDefault();
+}, { passive: false });
+
 // --- loop
 /** Animation frame loop: updates scene and renders. */
 function loop() {
