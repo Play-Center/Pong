@@ -12,13 +12,3 @@ html, body {
   image-rendering: pixelated;
   background: #000;
 }
-
-.help {
-  position: absolute;
-  bottom: 8px;
-  width: 100%;
-  text-align: center;
-  color: #888;
-  font: 12px monospace;
-  user-select: none;
-}

@@ -3,7 +3,12 @@ import { snap } from "./utils.js";
 
 const WHITE = COLORS.WHITE;
 
-// 5×7 glyphs (letters used + digits)
+/**
+ * 5x7 bitmap font glyphs where each entry is a 7x5 matrix of 0/1.
+ * Keys include digits, some punctuation, and uppercase ASCII letters.
+ * Pixel size is determined by the `cell` parameter in draw functions.
+ * @type {Record<string, (0|1)[][]>}
+ */
 export const FONT5x7 = {
   "0":[[0,1,1,1,0],[1,0,0,0,1],[1,0,0,1,1],[1,0,1,0,1],[1,1,0,0,1],[1,0,0,0,1],[0,1,1,1,0]],
   "1":[[0,0,1,0,0],[0,1,1,0,0],[1,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[0,0,1,0,0],[1,1,1,1,1]],
@@ -71,3 +76,5 @@ export function drawTextBlocks(str, centerX, topY, cell, g2d, color = WHITE, gap
     x += 5 * cell + gap;
   }
 }
+
+

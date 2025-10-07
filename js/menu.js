@@ -4,29 +4,69 @@ import { measureTextBlocks, drawTextBlocks } from "./font5x7.js";
 
 const WHITE = COLORS.WHITE;
 
-// Track mouse position in canvas coords
+/** Track mouse position in canvas coords. */
 let mouseX = -1, mouseY = -1;
 
 // Rebuilt every frame
+/** @type {{label:string,x:number,y:number,w:number,h:number}[]} */
 let btnRects = []; // [{ label, x, y, w, h }]
 
+// Simple menu state: "root" (PONG + SINGLE/MULTI) or "single" (EASY/NORMAL/HARD)
+/** @type {"root"|"single"} */
+let menuMode = "root";
+
+/** Reset menu to the root screen (PONG + SINGLE/MULTI). */
+export function menuReset() {
+  menuMode = "root";
+}
+
+/**
+ * Point-in-rect test.
+ * @param {number} mx
+ * @param {number} my
+ * @param {{x:number,y:number,w:number,h:number}} r
+ * @returns {boolean}
+ */
 function inRect(mx, my, r) {
   return mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h;
 }
 
 // --- called from main.js
+/**
+ * Update mouse position (canvas coordinates) for hover detection.
+ * @param {number} mx
+ * @param {number} my
+ */
 export function menuMouseMove(mx, my) {
   mouseX = mx;
   mouseY = my;
 }
 
 // --- called from main.js
-// Returns the clicked button label or null
+/**
+ * Return the clicked button label or null if none.
+ * On root menu, clicking SINGLEPLAYER transitions to difficulty submenu.
+ * @returns {string|null}
+ */
 export function menuClick() {
   const hit = btnRects.find(r => inRect(mouseX, mouseY, r));
-  return hit ? hit.label : null;
+  if (!hit) return null;
+
+  if (menuMode === "root") {
+    if (hit.label === "SINGLEPLAYER") {
+      // Transition to difficulty selection; do not leave menu yet
+      menuMode = "single";
+      return null;
+    }
+    // Allow other root actions to bubble up (e.g., MULTIPLAYER)
+    return hit.label;
+  }
+
+  // In single-player difficulty menu, return the difficulty label
+  return hit.label; // EASY | NORMAL | HARD
 }
 
+/** Draw the current menu screen (root or difficulty). */
 export function drawMenu() {
   g.fillStyle = "#000";
   g.fillRect(0, 0, W, H);
@@ -38,11 +78,15 @@ export function drawMenu() {
   const btnCell   = Math.max(4, Math.floor(5 * scale));
   const titleY    = 36 * scale;
 
-  // Title
-  drawTextBlocks("PONG", W / 2, titleY, titleCell, g);
+  // Draw title only on the root menu
+  if (menuMode === "root") {
+    drawTextBlocks("PONG", W / 2, titleY, titleCell, g);
+  }
 
-  // Buttons: top = SINGLE PLAYER, bottom = MULTIPLAYER
-  const labels = ["SINGLEPLAYER", "MULTIPLAYER"];
+  // Buttons per menu screen
+  const labels = (menuMode === "root")
+    ? ["SINGLEPLAYER", "MULTIPLAYER"]
+    : ["EASY", "NORMAL", "HARD"];
   const gap    = btnCell;
   const padX   = 3 * btnCell;
   const padY   = 2 * btnCell;
